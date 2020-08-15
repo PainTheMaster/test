@@ -1,0 +1,9 @@
+{
+    "editor.fontSize": 18,
+      "dlvLoadConfig" : {
+        "maxVariableRecurse": 3,
+        "maxStringLen": 10,
+        "maxArrayValues": 1000,
+        "maxStructFields": -1
+    }
+}
