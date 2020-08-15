@@ -3,6 +3,7 @@ package main
 import (
 	"PainTheMaster/mybraly/deeplearning"
 	"PainTheMaster/mybraly/deeplearning/mnist"
+	"encoding/gob"
 	"fmt"
 	"os"
 )
@@ -42,8 +43,8 @@ func main() {
 		fmt.Println("Training label file open error:", fileErr)
 	}
 
-	miniBatchSize := 10
-	repetition := 15000
+	miniBatchSize := 50
+	repetition := 200
 	errHist := neuralNet.Train(trainImg, trainLabel, miniBatchSize, repetition, deeplearning.LabelAdam)
 
 	fmt.Println("Training finished:")
@@ -63,7 +64,18 @@ func main() {
 		fmt.Println("Training label file open error:", fileErr)
 	}
 
-	testSize := 5000
+	testSize := 10000
 	accuracyPct := neuralNet.Test(testImg, testLabel, testSize)
-	fmt.Printf("Test accuracy with %d samples: %f%%", testSize, accuracyPct)
+	fmt.Printf("Test accuracy with %d samples: %f%%\n", testSize, accuracyPct)
+
+	file, err := os.Create("./learningData.bin")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	encoder := gob.NewEncoder(file)
+	encoder.Encode(neuralNet)
+	fmt.Println("learningData.bin stored")
+	file.Close()
+
 }
