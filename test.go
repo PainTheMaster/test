@@ -136,7 +136,7 @@ func main() {
 		file.Close()
 
 		testSize := 10000
-		accuracyPct := neuralNet.Test(testImg, testLabel, testSize)
+		accuracyPct, _ := neuralNet.Test(testImg, testLabel, testSize)
 		fmt.Printf("Epoch-%d Test accuracy with %d samples: %f%%\n", epoch, testSize, accuracyPct)
 		//	testImg.Close()
 		//	testLabel.Close()
