@@ -8,6 +8,61 @@ import (
 	"os"
 )
 
+type NNStore struct {
+	W               [][][]float64
+	DW              [][][]float64
+	DiffW           [][][]float64
+	ParamGradDecent struct {
+		//Hyper parameters
+		LearnRate float64
+	}
+
+	ParamMomentum struct {
+		//Hyer parameters
+		LearnRate  float64
+		MomentRate float64
+		//Working parameters
+		moment [][][]float64
+	}
+
+	ParamAdaGrad struct {
+		//Hyper parameters
+		LearnRate float64
+		//Working parameters
+		Rep   int
+		SqSum [][][]float64
+	}
+
+	ParamRMSProp struct {
+		//Hyper parameters
+		LearnRate float64
+		DecayRate float64
+		//Working parameters
+		Rep     int
+		ExpMvAv [][][]float64
+	}
+
+	ParamAdaDelta struct {
+		//Hyper parameters
+		DecayRate float64
+		//WorkingParameters
+		Rep         int
+		ExpMvAvDW   [][][]float64
+		ExpMvAvGrad [][][]float64
+	}
+
+	ParamAdam struct {
+		//Hyper parameters
+		LearnRate  float64
+		DecayRate1 float64
+		DecayRate2 float64
+		//Working parameters
+		Rep        int
+		ExpMvAvPri [][][]float64
+		ExpMvAvSec [][][]float64
+	}
+}
+
 func main() {
 	actFuncHidden := []string{deeplearning.LabelIdentity, deeplearning.LabelReLU, deeplearning.LabelReLU, deeplearning.LabelReLU}
 	actFuncOut := deeplearning.LabelSoftMax
@@ -21,7 +76,7 @@ func main() {
 
 	neuralNet.ParamAdam.DecayRate1 = 0.9
 	neuralNet.ParamAdam.DecayRate2 = 0.999
-	neuralNet.ParamAdam.LearnRate = 0.001
+	neuralNet.ParamAdam.LearnRate = 0.0005
 
 	neuralNet.ParamAdaDelta.DecayRate = 0.999
 
@@ -43,18 +98,6 @@ func main() {
 		fmt.Println("Training label file open error:", fileErr)
 	}
 
-	miniBatchSize := 50
-	repetition := 200
-	errHist := neuralNet.Train(trainImg, trainLabel, miniBatchSize, repetition, deeplearning.LabelAdam)
-
-	fmt.Println("Training finished:")
-	for i := range errHist {
-		fmt.Printf("%d,%f\n", i+1, errHist[i])
-	}
-
-	trainImg.Close()
-	trainLabel.Close()
-
 	testImg, fileErr := os.Open(home + "/deeplearning/t10k-images-idx3-ubyte")
 	if fileErr != nil {
 		fmt.Println("Test image file open error:", fileErr)
@@ -64,18 +107,43 @@ func main() {
 		fmt.Println("Training label file open error:", fileErr)
 	}
 
-	testSize := 10000
-	accuracyPct := neuralNet.Test(testImg, testLabel, testSize)
-	fmt.Printf("Test accuracy with %d samples: %f%%\n", testSize, accuracyPct)
+	for epoch := 1; epoch <= 20; epoch++ {
+		miniBatchSize := 50
+		repetition := 1200
+		neuralNet.Train(trainImg, trainLabel, miniBatchSize, repetition, deeplearning.LabelAdam)
 
-	file, err := os.Create("./learningData.bin")
+		//	trainImg.Seek(0, 0)
+		//	trainLabel.Seek(0, 0)
+
+		file, err := os.Create("./learningData-" + fmt.Sprintf("%d", epoch) + ".bin")
+		if err != nil {
+			fmt.Println(err)
+		}
+		var tempNN NNStore
+		tempNN.W = neuralNet.W
+		tempNN.DW = neuralNet.DW
+		tempNN.DiffW = neuralNet.DiffW
+
+		encoder := gob.NewEncoder(file)
+		encoder.Encode(tempNN)
+		file.Close()
+
+		testSize := 10000
+		accuracyPct := neuralNet.Test(testImg, testLabel, testSize)
+		fmt.Printf("Epoch-%d Test accuracy with %d samples: %f%%\n", epoch, testSize, accuracyPct)
+		//	testImg.Close()
+		//	testLabel.Close()
+	}
+
+	recovNN := deeplearning.Make(nodes, actFuncHidden, actFuncOut)
+	file, err := os.Open("/home/painthemaster/go/src/PainTheMaster/test/learningData-5.bin")
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&recovNN)
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(neuralNet)
-	fmt.Println("learningData.bin stored")
-	file.Close()
+	testSize := 10000
+	accuracyPct := recovNN.Test(testImg, testLabel, testSize)
+	fmt.Printf("RecovNN Test accuracy with %d samples: %f%%\n", testSize, accuracyPct)
 
 }
