@@ -64,11 +64,11 @@ type NNStore struct {
 }
 
 func main() {
-	actFuncHidden := []string{deeplearning.LabelIdentity, deeplearning.LabelReLU, deeplearning.LabelReLU, deeplearning.LabelReLU}
+	actFuncHidden := []string{deeplearning.LabelIdentity, deeplearning.LabelReLU, deeplearning.LabelReLU, deeplearning.LabelReLU, deeplearning.LabelReLU, deeplearning.LabelReLU}
 	actFuncOut := deeplearning.LabelSoftMax
 
 	mnistDataLen := mnist.MnistCols * mnist.MnistRows
-	nodes := []int{mnistDataLen, 32, 32, 32, 10}
+	nodes := []int{mnistDataLen, 128, 64, 64, 32, 32, 10}
 	neuralNet := deeplearning.Make(nodes, actFuncHidden, actFuncOut)
 
 	neuralNet.ParamRMSProp.DecayRate = 0.9
@@ -76,7 +76,7 @@ func main() {
 
 	neuralNet.ParamAdam.DecayRate1 = 0.9
 	neuralNet.ParamAdam.DecayRate2 = 0.999
-	neuralNet.ParamAdam.LearnRate = 0.0005
+	neuralNet.ParamAdam.LearnRate = 0.0002
 
 	neuralNet.ParamAdaDelta.DecayRate = 0.999
 
@@ -107,7 +107,14 @@ func main() {
 		fmt.Println("Training label file open error:", fileErr)
 	}
 
-	for epoch := 1; epoch <= 20; epoch++ {
+	file, err := os.Open("/home/painthemaster/go/src/PainTheMaster/test/6layers/learningData-40.bin")
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&neuralNet)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for epoch := 41; epoch <= 100; epoch++ {
 		miniBatchSize := 50
 		repetition := 1200
 		neuralNet.Train(trainImg, trainLabel, miniBatchSize, repetition, deeplearning.LabelAdam)
@@ -115,7 +122,7 @@ func main() {
 		//	trainImg.Seek(0, 0)
 		//	trainLabel.Seek(0, 0)
 
-		file, err := os.Create("./learningData-" + fmt.Sprintf("%d", epoch) + ".bin")
+		file, err := os.Create("./6layers/learningData-" + fmt.Sprintf("%d", epoch) + ".bin")
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -134,16 +141,5 @@ func main() {
 		//	testImg.Close()
 		//	testLabel.Close()
 	}
-
-	recovNN := deeplearning.Make(nodes, actFuncHidden, actFuncOut)
-	file, err := os.Open("/home/painthemaster/go/src/PainTheMaster/test/learningData-5.bin")
-	decoder := gob.NewDecoder(file)
-	err = decoder.Decode(&recovNN)
-	if err != nil {
-		fmt.Println(err)
-	}
-	testSize := 10000
-	accuracyPct := recovNN.Test(testImg, testLabel, testSize)
-	fmt.Printf("RecovNN Test accuracy with %d samples: %f%%\n", testSize, accuracyPct)
 
 }
